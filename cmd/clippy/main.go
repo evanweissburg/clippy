@@ -1,11 +1,9 @@
 package main
 
 import (
-    "fmt"
-    "github.com/evanweissburg/clippy/pkg/networking"
+    "github.com/evanweissburg/clippy/pkg/client"
 )
 
 func main() {
-    fmt.Println("clippy client")
-    networking.SendData("test data")
+    client.Execute()
 }

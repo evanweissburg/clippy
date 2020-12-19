@@ -1,9 +1,9 @@
 package main
 
 import (
-    "fmt"
+    "github.com/evanweissburg/clippy/pkg/server"
 )
 
 func main() {
-    fmt.Println("clippy server")
+    server.Execute()
 }
