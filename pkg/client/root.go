@@ -2,7 +2,7 @@ package client
 
 import (
 	"fmt"
-    "github.com/evanweissburg/clippy/pkg/networking"
+	"github.com/evanweissburg/clippy/pkg/networking"
 )
 
 func Execute() {

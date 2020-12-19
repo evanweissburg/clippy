@@ -1,9 +1,9 @@
 package server
 
 import (
-    "fmt"
+	"fmt"
 )
 
 func Execute() {
-    fmt.Println("Clippy server")
+	fmt.Println("Clippy server")
 }

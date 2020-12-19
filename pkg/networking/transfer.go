@@ -1,14 +1,14 @@
 package networking
 
 import (
-    "fmt"
+	"fmt"
 )
 
 func SendData(data string) bool {
-    if data == "bad" {
-        return false
-    }
+	if data == "bad" {
+		return false
+	}
 
-    fmt.Println(data)
-    return true
+	fmt.Println(data)
+	return true
 }
