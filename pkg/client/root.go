@@ -1,7 +1,6 @@
 package client
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -22,10 +21,14 @@ func Execute() {
 	switch os.Args[1] {
 	case "put":
 		filename := os.Args[2]
-		fmt.Printf("put %s\n", filename)
 
-		data := "test_data"
-		resp, err := http.Post("http://localhost:8080/", "text/plain", bytes.NewBuffer([]byte(data)))
+		file, err := os.Open(filename)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer file.Close()
+
+		resp, err := http.Post("http://localhost:8080/", "text/plain", file)
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -36,11 +39,12 @@ func Execute() {
 			log.Fatalln(err)
 		}
 
-		log.Println(string(body))
+		clipcode := string(body)
+
+		fmt.Printf("Recieved clipcode %s\n", clipcode)
 
 	case "get":
 		clipcode := os.Args[2]
-		fmt.Printf("Retrieving clipcode %s\n", clipcode)
 		resp, err := http.Get("http://localhost:8080/" + clipcode)
 		if err != nil {
 			log.Fatalln(err)
