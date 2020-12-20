@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"path"
 	"sync"
 	"time"
@@ -19,9 +20,41 @@ const (
 )
 
 func Execute() {
+	os.RemoveAll(serverFileStorageDir)
+	os.Mkdir(serverFileStorageDir, 0700)
+
 	http.HandleFunc("/", handler)
 	fmt.Println("Hosting HTTP server on port 8080")
+	go makeRefreshTicker(30, 30)
 	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+
+func makeRefreshTicker(refreshSecs time.Duration, keepSecs time.Duration) {
+	ticker := time.NewTicker(refreshSecs * time.Second)
+	for {
+		select {
+		case <-ticker.C:
+			go enactRefresh(keepSecs)
+		}
+	}
+}
+
+func enactRefresh(keepSecs time.Duration) {
+	fmt.Printf("Starting server refresh\n")
+	numRemoved := 0
+	mu.Lock()
+	for clipcode, timestamp := range db {
+		if time.Now().Sub(timestamp) > keepSecs*time.Second {
+			if err := os.Remove(serverFileStorageDir + clipcode); err != nil {
+				fmt.Printf("\tFailed to remove file on server refresh with clipcode %s\n", clipcode)
+				continue
+			}
+			delete(db, clipcode)
+			numRemoved++
+		}
+	}
+	mu.Unlock()
+	fmt.Printf("\tFinished server refresh, %d objects removed\n", numRemoved)
 }
 
 func nextClipcode() string {
