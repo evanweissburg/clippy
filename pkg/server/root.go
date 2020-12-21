@@ -77,11 +77,11 @@ func makeClipcode() string {
 }
 
 func isClipcode(str string) bool {
-	if len(str) != 4 {
+	if len(str) != clipcodeLength {
 		return false
 	}
 	for _, e := range str {
-		if !unicode.IsUpper(e) {
+		if !unicode.IsLetter(e) {
 			return false
 		}
 	}
