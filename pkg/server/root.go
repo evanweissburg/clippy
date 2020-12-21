@@ -19,6 +19,7 @@ var db = make(map[string]time.Time)
 const (
 	serverFileStorageDir = "server_data/"
 	clipcodeLength       = 4
+	clipLifetime         = 3 * time.Minute
 )
 
 func Execute() {
@@ -27,26 +28,26 @@ func Execute() {
 
 	http.HandleFunc("/", handler)
 	fmt.Println("Hosting HTTP server on port 8080")
-	go makeRefreshTicker(30, 30)
+	go makeRefreshTicker(30)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
-func makeRefreshTicker(refreshSecs time.Duration, keepSecs time.Duration) {
+func makeRefreshTicker(refreshSecs time.Duration) {
 	ticker := time.NewTicker(refreshSecs * time.Second)
 	for {
 		select {
 		case <-ticker.C:
-			go enactRefresh(keepSecs)
+			go enactRefresh()
 		}
 	}
 }
 
-func enactRefresh(keepSecs time.Duration) {
+func enactRefresh() {
 	fmt.Printf("Starting server refresh\n")
 	victims := make([]string, 0)
 	mu.Lock()
-	for clipcode, timestamp := range db {
-		if time.Now().Sub(timestamp) > keepSecs*time.Second {
+	for clipcode, expiration := range db {
+		if time.Now().After(expiration) {
 			delete(db, clipcode)
 			victims = append(victims, clipcode)
 		}
@@ -135,7 +136,9 @@ func handleUpload(data []byte) string {
 	}
 
 	mu.Lock()
-	db[clipcode] = time.Now()
+	expiration := time.Now().Add(clipLifetime)
+	fmt.Printf("Clipcode %s will expire at %v", clipcode, expiration)
+	db[clipcode] = expiration
 	mu.Unlock()
 	return clipcode
 }
