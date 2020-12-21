@@ -137,7 +137,6 @@ func handleUpload(data []byte) string {
 
 	mu.Lock()
 	expiration := time.Now().Add(clipLifetime)
-	fmt.Printf("Clipcode %s will expire at %v", clipcode, expiration)
 	db[clipcode] = expiration
 	mu.Unlock()
 	return clipcode
@@ -148,9 +147,23 @@ func handleRequest(clipcode string) []byte {
 		return nil
 	}
 
-	data, err := ioutil.ReadFile(serverFileStorageDir + clipcode)
-	if err != nil {
+	mu.Lock()
+	expiration, ok := db[clipcode]
+	mu.Unlock()
+
+	if !ok || time.Now().After(expiration) {
 		return nil
 	}
+
+	data, err := ioutil.ReadFile(serverFileStorageDir + clipcode)
+	if err != nil {
+		fmt.Printf("\tFailed to read valid clipcode %s\n", clipcode)
+		return nil
+	}
+
+	mu.Lock()
+	db[clipcode] = time.Now()
+	mu.Unlock()
+
 	return data
 }
