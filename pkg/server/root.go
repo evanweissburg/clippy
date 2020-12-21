@@ -10,6 +10,7 @@ import (
 	"path"
 	"sync"
 	"time"
+	"unicode"
 )
 
 var mu sync.Mutex
@@ -17,6 +18,7 @@ var db = make(map[string]time.Time)
 
 const (
 	serverFileStorageDir = "server_data/"
+	clipcodeLength       = 4
 )
 
 func Execute() {
@@ -41,25 +43,28 @@ func makeRefreshTicker(refreshSecs time.Duration, keepSecs time.Duration) {
 
 func enactRefresh(keepSecs time.Duration) {
 	fmt.Printf("Starting server refresh\n")
-	numRemoved := 0
+	victims := make([]string, 0)
 	mu.Lock()
 	for clipcode, timestamp := range db {
 		if time.Now().Sub(timestamp) > keepSecs*time.Second {
-			if err := os.Remove(serverFileStorageDir + clipcode); err != nil {
-				fmt.Printf("\tFailed to remove file on server refresh with clipcode %s\n", clipcode)
-				continue
-			}
 			delete(db, clipcode)
-			numRemoved++
+			victims = append(victims, clipcode)
 		}
 	}
 	mu.Unlock()
-	fmt.Printf("\tFinished server refresh, %d objects removed\n", numRemoved)
+
+	for _, clipcode := range victims {
+		if err := os.Remove(serverFileStorageDir + clipcode); err != nil {
+			fmt.Printf("\tFailed to remove file on server refresh with clipcode %s\n", clipcode)
+			continue
+		}
+	}
+	fmt.Printf("\tFinished server refresh, %d objects removed\n", len(victims))
 }
 
-func nextClipcode() string {
+func makeClipcode() string {
 	for {
-		code := make([]rune, 4)
+		code := make([]rune, clipcodeLength)
 		for i := range code {
 			code[i] = 'A' + rune(rand.Intn(26))
 		}
@@ -68,6 +73,18 @@ func nextClipcode() string {
 			return string(code)
 		}
 	}
+}
+
+func isClipcode(str string) bool {
+	if len(str) != 4 {
+		return false
+	}
+	for _, e := range str {
+		if !unicode.IsUpper(e) {
+			return false
+		}
+	}
+	return true
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
@@ -111,7 +128,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleUpload(data []byte) string {
-	clipcode := nextClipcode()
+	clipcode := makeClipcode()
 	err := ioutil.WriteFile(serverFileStorageDir+clipcode, data, 0644)
 	if err != nil {
 		fmt.Printf("\tFailed to write file with clipcode %s\n", clipcode)
@@ -124,6 +141,10 @@ func handleUpload(data []byte) string {
 }
 
 func handleRequest(clipcode string) []byte {
+	if !isClipcode(clipcode) {
+		return nil
+	}
+
 	data, err := ioutil.ReadFile(serverFileStorageDir + clipcode)
 	if err != nil {
 		return nil
