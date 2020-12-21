@@ -1,10 +1,10 @@
-package client
+package cli
 
 import (
 	"fmt"
+	"github.com/evanweissburg/clippy/pkg/client"
 	"io/ioutil"
 	"log"
-	"net/http"
 	"os"
 )
 
@@ -26,37 +26,36 @@ func Execute() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer file.Close()
 
-		resp, err := http.Post("http://localhost:8080/", "text/plain", file)
+		cl := client.Client{
+			BaseURL: "http://localhost:8080/",
+		}
+
+		clipcode, err := cl.Upload(file)
 		if err != nil {
 			log.Fatalln(err)
 		}
-
-		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Fatalln(err)
-		}
-
-		clipcode := string(body)
 
 		fmt.Printf("Recieved clipcode %s\n", clipcode)
 
 	case "get":
 		clipcode := os.Args[2]
-		resp, err := http.Get("http://localhost:8080/" + clipcode)
+
+		cl := client.Client{
+			BaseURL: "http://localhost:8080/",
+		}
+
+		data, err := cl.Download(clipcode)
 		if err != nil {
 			log.Fatalln(err)
 		}
 
-		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
+		text, err := ioutil.ReadAll(data)
 		if err != nil {
 			log.Fatalln(err)
 		}
 
-		log.Println(string(body))
+		log.Println(string(text))
 
 	default:
 		invalid_usage()
