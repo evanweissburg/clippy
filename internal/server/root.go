@@ -5,12 +5,15 @@ import (
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"net"
 	"net/http"
 	"os"
 	"path"
 	"sync"
 	"time"
 	"unicode"
+
+	"github.com/evanweissburg/clippy/pkg/ratelimit"
 )
 
 var mu sync.Mutex
@@ -90,6 +93,16 @@ func isClipcode(str string) bool {
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("Recieved request %s %s\n", r.Method, r.URL)
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Printf("\tFailed to decode remote address %s", r.RemoteAddr)
+	}
+	if !ratelimit.RequestAccess(ip) {
+		w.WriteHeader(http.StatusTooManyRequests)
+		fmt.Printf("\t IP %s is being rate limited\n", ip)
+		return
+	}
 
 	if r.Method == http.MethodPost && r.URL.Path == "/" {
 		defer r.Body.Close()
