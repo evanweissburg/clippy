@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"github.com/evanweissburg/clippy/pkg/client"
+	"github.com/evanweissburg/clippy/pkg/mnemonic"
 	"github.com/mholt/archiver/v3"
 	"io"
 	"log"
@@ -54,6 +55,11 @@ func put(filename string) {
 	}
 
 	fmt.Printf("Recieved clipcode %s\n", clipcode)
+
+	mnemonic, err := mnemonic.CreateSentence(clipcode)
+	if err == nil {
+		fmt.Printf("Remember it with: %s\n", mnemonic)
+	}
 
 	err = os.Remove(".clip.zip")
 	if err != nil {
