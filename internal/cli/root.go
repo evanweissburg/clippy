@@ -7,7 +7,9 @@ import (
 	"github.com/mholt/archiver/v3"
 	"io"
 	"log"
+	"math/rand"
 	"os"
+	"time"
 )
 
 func invalid_usage() {
@@ -56,6 +58,7 @@ func put(filename string) {
 
 	fmt.Printf("Recieved clipcode %s\n", clipcode)
 
+	rand.Seed(time.Now().UTC().UnixNano())
 	mnemonic, err := mnemonic.CreateSentence(clipcode)
 	if err == nil {
 		fmt.Printf("Remember it with: %s\n", mnemonic)
