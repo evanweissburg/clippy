@@ -50,6 +50,10 @@ func isValidPhrase(phrase, acronym string) bool {
 	}
 
 	words := strings.Split(phrase, " ")
+	if len(words) != len(acronym) {
+		return false
+	}
+
 	for i, letter := range acronym {
 		if len(words) <= i || len(words[i]) == 0 || rune(words[i][0]) != unicode.ToLower(letter) {
 			return false
@@ -76,7 +80,7 @@ func TestCreatePhrase(t *testing.T) {
 		}
 	}
 
-	invalidAcronyms := []string{"", "ab1", "...", "/\\", "aaaaaaaa", "ffĀ", "šaa"}
+	invalidAcronyms := []string{"", "ab1", "...", "/\\", "aaaaaaaa", "ffĀ", "šaa", "123abc"}
 	for _, acronym := range invalidAcronyms {
 		_, err := CreatePhrase(acronym)
 		if err == nil {
@@ -86,7 +90,7 @@ func TestCreatePhrase(t *testing.T) {
 }
 
 func TestCreateSentence(t *testing.T) {
-	acronyms := []string{"ayjw", "jmwcl", "octguf"}
+	acronyms := []string{"ayjw", "jmwcl", "octguf", "PTwH"}
 
 	for _, acronym := range acronyms {
 		sentence, err := CreateSentence(acronym)
