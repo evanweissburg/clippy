@@ -16,6 +16,7 @@ import (
 	"github.com/evanweissburg/clippy/pkg/ratelimit"
 )
 
+var port = "8090"
 var mu sync.Mutex
 var db = make(map[string]time.Time)
 
@@ -25,14 +26,15 @@ const (
 	clipLifetime         = 3 * time.Minute
 )
 
+// Execute runs the Clippy server
 func Execute() {
 	os.RemoveAll(serverFileStorageDir)
 	os.Mkdir(serverFileStorageDir, 0700)
 
 	http.HandleFunc("/", handler)
-	fmt.Println("Hosting HTTP server on port 8080")
+	fmt.Printf("Hosting HTTP server on port %s", port)
 	go makeRefreshTicker(30)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), nil))
 }
 
 func makeRefreshTicker(refreshSecs time.Duration) {
