@@ -7,12 +7,8 @@ import (
 	"net/http"
 )
 
-type Client struct {
-	BaseURL string
-}
-
-func (c *Client) Upload(input io.Reader) (string, error) {
-	resp, err := http.Post(c.BaseURL, "text/plain", input)
+func Upload(baseURL string, input io.Reader) (string, error) {
+	resp, err := http.Post(baseURL, "text/plain", input)
 	if err != nil {
 		return "", err
 	}
@@ -26,8 +22,8 @@ func (c *Client) Upload(input io.Reader) (string, error) {
 	return clipcode, nil
 }
 
-func (c *Client) Download(clipcode string) (io.ReadCloser, error) {
-	resp, err := http.Get(c.BaseURL + clipcode)
+func Download(baseURL string, clipcode string) (io.ReadCloser, error) {
+	resp, err := http.Get(baseURL + clipcode)
 	if err != nil {
 		return nil, err
 	}

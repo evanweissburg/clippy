@@ -47,11 +47,7 @@ func put(filename string) {
 		log.Fatal(err)
 	}
 
-	cl := client.Client{
-		BaseURL: "http://localhost:8080/",
-	}
-
-	clipcode, err := cl.Upload(file)
+	clipcode, err := client.Upload("http://localhost:8080/", file)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -71,11 +67,7 @@ func put(filename string) {
 }
 
 func get(clipcode string) {
-	cl := client.Client{
-		BaseURL: "http://localhost:8080/",
-	}
-
-	data, err := cl.Download(clipcode)
+	data, err := client.Download("http://localhost:8080/", clipcode)
 	if err != nil {
 		log.Fatalln(err)
 	}
