@@ -6,54 +6,79 @@ import (
 	"github.com/evanweissburg/clippy/pkg/mnemonic"
 	"github.com/mholt/archiver/v3"
 	"io"
-	"log"
+	"io/ioutil"
 	"math/rand"
 	"os"
+	"path"
 	"time"
 )
 
-func invalid_usage() {
-	fmt.Println("Correct usage: <>")
-	os.Exit(1)
+const DefaultServer = "3.139.66.108"
+
+func printUsage() {
+	fmt.Printf("Usage:\n\t%v put file [server]\n\t%v get clipcode [server]\n\t%v help\n", os.Args[0], os.Args[0], os.Args[0])
 }
 
 func Execute() {
-	if len(os.Args) != 3 {
-		invalid_usage()
+	if len(os.Args) != 3 && len(os.Args) != 4 {
+		printUsage()
+		os.Exit(1)
+	}
+
+	server := DefaultServer
+	if len(os.Args) == 4 {
+		server = os.Args[3]
 	}
 
 	switch os.Args[1] {
 	case "put":
 		filename := os.Args[2]
-		put(filename)
+		err := put(filename, server)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 
 	case "get":
 		clipcode := os.Args[2]
-		get(clipcode)
+		err := get(clipcode, server)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+	case "help":
+		printUsage()
 
 	default:
-		invalid_usage()
+		printUsage()
+		os.Exit(1)
 	}
 }
 
-func put(filename string) {
-	err := archiver.Archive([]string{filename}, ".clip.zip")
+func put(filename, server string) error {
+	tempDir, err := ioutil.TempDir("", "clippy-*")
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("Unable to create temporary directory: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	zipFilename := path.Join(tempDir, "clip.zip")
+
+	err = archiver.Archive([]string{filename}, zipFilename)
+	if err != nil {
+		return fmt.Errorf("Unable to create zip of %s at %s: %v", filename, zipFilename, err)
 	}
 
-	file, err := os.Open(".clip.zip")
+	zipFile, err := os.Open(zipFilename)
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("Unable to open zip file %s: %v", zipFilename, err)
 	}
+	defer zipFile.Close()
 
-	cl := client.Client{
-		BaseURL: "http://localhost:8080/",
-	}
-
-	clipcode, err := cl.Upload(file)
+	clipcode, err := client.Upload(server, zipFile)
 	if err != nil {
-		log.Fatalln(err)
+		return fmt.Errorf("Unable to upload to server: %v", err)
 	}
 
 	fmt.Printf("Recieved clipcode %s\n", clipcode)
@@ -64,39 +89,33 @@ func put(filename string) {
 		fmt.Printf("Remember it with: %s\n", mnemonic)
 	}
 
-	err = os.Remove(".clip.zip")
-	if err != nil {
-		log.Fatalln(err)
-	}
+	return nil
 }
 
-func get(clipcode string) {
-	cl := client.Client{
-		BaseURL: "http://localhost:8080/",
-	}
-
-	data, err := cl.Download(clipcode)
+func get(clipcode, server string) error {
+	data, err := client.Download(server, clipcode)
 	if err != nil {
-		log.Fatalln(err)
+		return fmt.Errorf("Unable to retrieve data: %v", err)
 	}
+	defer data.Close()
 
-	file, err := os.Create(".clip.zip")
+	file, err := ioutil.TempFile("", "clippy-*.zip")
+	tempFilename := file.Name()
 	if err != nil {
-		log.Fatalln(err)
+		return fmt.Errorf("Unable to create temporary file: %v", err)
 	}
+	defer os.Remove(tempFilename)
+
 	_, err = io.Copy(file, data)
-	err = file.Close()
+	file.Close()
 	if err != nil {
-		log.Fatalln(err)
+		return fmt.Errorf("Unable to save data: %v", err)
 	}
 
-	err = archiver.Unarchive(".clip.zip", ".")
+	err = archiver.Unarchive(tempFilename, ".")
 	if err != nil {
-		log.Fatalln(err)
+		return fmt.Errorf("Unable to unarchive data: %v", err)
 	}
 
-	err = os.Remove(".clip.zip")
-	if err != nil {
-		log.Fatalln(err)
-	}
+	return nil
 }

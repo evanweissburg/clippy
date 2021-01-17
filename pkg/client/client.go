@@ -5,14 +5,16 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 )
 
-type Client struct {
-	BaseURL string
-}
+func Upload(server string, input io.Reader) (string, error) {
+	url := url.URL{Scheme: "http", Host: server}
+	if url.Port() == "" {
+		url.Host = url.Host + ":8090"
+	}
 
-func (c *Client) Upload(input io.Reader) (string, error) {
-	resp, err := http.Post(c.BaseURL, "text/plain", input)
+	resp, err := http.Post(url.String(), "text/plain", input)
 	if err != nil {
 		return "", err
 	}
@@ -26,8 +28,13 @@ func (c *Client) Upload(input io.Reader) (string, error) {
 	return clipcode, nil
 }
 
-func (c *Client) Download(clipcode string) (io.ReadCloser, error) {
-	resp, err := http.Get(c.BaseURL + clipcode)
+func Download(server string, clipcode string) (io.ReadCloser, error) {
+	url := url.URL{Scheme: "http", Host: server, Path: clipcode}
+	if url.Port() == "" {
+		url.Host = url.Host + ":8090"
+	}
+
+	resp, err := http.Get(url.String())
 	if err != nil {
 		return nil, err
 	}
