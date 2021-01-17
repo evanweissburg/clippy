@@ -117,5 +117,7 @@ func get(clipcode, server string) error {
 		return fmt.Errorf("Unable to unarchive data: %v", err)
 	}
 
+	fmt.Println("Clip successful.")
+
 	return nil
 }
