@@ -13,20 +13,27 @@ import (
 	"time"
 )
 
-func invalid_usage() {
-	fmt.Println("Correct usage: <>")
-	os.Exit(1)
+const DefaultServer = "3.139.66.108"
+
+func printUsage() {
+	fmt.Printf("Usage:\n\t%v put file [server]\n\t%v get clipcode [server]\n\t%v help\n", os.Args[0], os.Args[0], os.Args[0])
 }
 
 func Execute() {
-	if len(os.Args) != 3 {
-		invalid_usage()
+	if len(os.Args) != 3 && len(os.Args) != 4 {
+		printUsage()
+		os.Exit(1)
+	}
+
+	server := DefaultServer
+	if len(os.Args) == 4 {
+		server = os.Args[3]
 	}
 
 	switch os.Args[1] {
 	case "put":
 		filename := os.Args[2]
-		err := put(filename)
+		err := put(filename, server)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
@@ -34,18 +41,22 @@ func Execute() {
 
 	case "get":
 		clipcode := os.Args[2]
-		err := get(clipcode)
+		err := get(clipcode, server)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 
+	case "help":
+		printUsage()
+
 	default:
-		invalid_usage()
+		printUsage()
+		os.Exit(1)
 	}
 }
 
-func put(filename string) error {
+func put(filename, server string) error {
 	tempDir, err := ioutil.TempDir("", "clippy-*")
 	if err != nil {
 		return fmt.Errorf("Unable to create temporary directory: %v", err)
@@ -65,7 +76,7 @@ func put(filename string) error {
 	}
 	defer zipFile.Close()
 
-	clipcode, err := client.Upload("http://localhost:8080/", zipFile)
+	clipcode, err := client.Upload(server, zipFile)
 	if err != nil {
 		return fmt.Errorf("Unable to upload to server: %v", err)
 	}
@@ -81,8 +92,8 @@ func put(filename string) error {
 	return nil
 }
 
-func get(clipcode string) error {
-	data, err := client.Download("http://localhost:8080/", clipcode)
+func get(clipcode, server string) error {
+	data, err := client.Download(server, clipcode)
 	if err != nil {
 		return fmt.Errorf("Unable to retrieve data: %v", err)
 	}
