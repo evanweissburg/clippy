@@ -6,9 +6,11 @@ import (
 	"github.com/evanweissburg/clippy/pkg/mnemonic"
 	"github.com/mholt/archiver/v3"
 	"io"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"os"
+	"path"
 	"time"
 )
 
@@ -37,19 +39,32 @@ func Execute() {
 }
 
 func put(filename string) {
-	err := archiver.Archive([]string{filename}, ".clip.zip")
+	tempDir, err := ioutil.TempDir("", "clippy-*")
 	if err != nil {
-		log.Fatal(err)
+		fmt.Printf("Unable to create temporary directory: %v\n", err)
+		return
+	}
+	defer os.RemoveAll(tempDir)
+
+	zipFilename := path.Join(tempDir, "clip.zip")
+
+	err = archiver.Archive([]string{filename}, zipFilename)
+	if err != nil {
+		fmt.Printf("Unable to create zip of %s at %s: %v\n", filename, zipFilename, err)
+		return
 	}
 
-	file, err := os.Open(".clip.zip")
+	zipFile, err := os.Open(zipFilename)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Printf("Unable to open zip file %s: %v\n", zipFilename, err)
+		return
 	}
+	defer zipFile.Close()
 
-	clipcode, err := client.Upload("http://localhost:8080/", file)
+	clipcode, err := client.Upload("http://localhost:8080/", zipFile)
 	if err != nil {
-		log.Fatalln(err)
+		fmt.Printf("Unable to upload to server: %v\n", err)
+		return
 	}
 
 	fmt.Printf("Recieved clipcode %s\n", clipcode)
@@ -58,11 +73,6 @@ func put(filename string) {
 	mnemonic, err := mnemonic.CreateSentence(clipcode)
 	if err == nil {
 		fmt.Printf("Remember it with: %s\n", mnemonic)
-	}
-
-	err = os.Remove(".clip.zip")
-	if err != nil {
-		log.Fatalln(err)
 	}
 }
 
