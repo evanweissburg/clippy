@@ -7,7 +7,6 @@ import (
 	"github.com/mholt/archiver/v3"
 	"io"
 	"io/ioutil"
-	"log"
 	"math/rand"
 	"os"
 	"path"
@@ -79,26 +78,29 @@ func put(filename string) {
 func get(clipcode string) {
 	data, err := client.Download("http://localhost:8080/", clipcode)
 	if err != nil {
-		log.Fatalln(err)
+		fmt.Printf("Unable to retrieve data: %v\n", err)
+		return
 	}
+	defer data.Close()
 
-	file, err := os.Create(".clip.zip")
+	file, err := ioutil.TempFile("", "clippy-*.zip")
+	tempFilename := file.Name()
 	if err != nil {
-		log.Fatalln(err)
+		fmt.Printf("Unable to create temporary file: %v\n", err)
+		return
 	}
+	defer os.Remove(tempFilename)
+
 	_, err = io.Copy(file, data)
-	err = file.Close()
+	file.Close()
 	if err != nil {
-		log.Fatalln(err)
+		fmt.Printf("Unable to save data: %v\n", err)
+		return
 	}
 
-	err = archiver.Unarchive(".clip.zip", ".")
+	err = archiver.Unarchive(tempFilename, ".")
 	if err != nil {
-		log.Fatalln(err)
-	}
-
-	err = os.Remove(".clip.zip")
-	if err != nil {
-		log.Fatalln(err)
+		fmt.Printf("Unable to unarchive data: %v\n", err)
+		return
 	}
 }
